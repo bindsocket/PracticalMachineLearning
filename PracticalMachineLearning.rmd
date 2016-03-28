@@ -13,6 +13,7 @@ Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible t
 The testing data is initially read from a CSV file. The resultant data frame contains 19,622 obs with 160 variables each. Many of these columns contained NAs and thus would need to be removed.
 ```{r}
 library(caret)
+library(plyr)
 library(dplyr)
 training <- read.csv("pml-training.csv")
 trainingClean <- training[,colSums(is.na(training))==0]
@@ -26,10 +27,9 @@ pairsDF <- cbind(trainingSub[,8:18],trainingSub[,93])
 pairs(pairsDF)
 ```
 This procedure was reiterated through the entire balance of columns.
-Following these iterations I picked the following predictors: trainingClean, pitch_belt, max_yaw_belt, min_yaw_belt, gyros_belt_x, gyros_belt_y, gyros_belt_z, accel_belt_x, magnet_belt_x, magnet_belt_y, roll_arm, pitch_arm,yaw_arm, total_accel_arm, gyros_arm_x, gyros_arm_y, accel_arm_y, accel_arm_z, magnet_arm_y, max_yaw_dumbbell, min_yaw_dumbbell, total_accel_dumbbell, gyros_dumbbell_x, gyros_dumbbell_x, gyros_dumbbell_z, accel_dumbbell_x, accel_dumbbell_y, magnet_dumbbell_x, magnet_dumbbell_y, magnet_dumbbell_z, pitch_forearm, skewness_yaw_forearm, gyros_forearm_x, gyros_forearm_y, gyros_forearm_z, accel_forearm_x, accel_forearm_z, magnet_forearm_x, magnet_forearm_y, and magnet_forearm_z. From those chosen a GBM model was trained using the train function from the caret package.
+Following these iterations I picked the following predictors: trainingClean, pitch_belt, max_yaw_belt, min_yaw_belt, gyros_belt_x, gyros_belt_y, gyros_belt_z, magnet_belt_x, magnet_belt_y, roll_arm, pitch_arm,yaw_arm, total_accel_arm, gyros_arm_x, gyros_arm_y, accel_arm_y, accel_arm_z, magnet_arm_y, max_yaw_dumbbell, min_yaw_dumbbell, total_accel_dumbbell, gyros_dumbbell_x, gyros_dumbbell_x, gyros_dumbbell_z, accel_dumbbell_x, accel_dumbbell_y, magnet_dumbbell_x, magnet_dumbbell_y, magnet_dumbbell_z, pitch_forearm, gyros_forearm_x, gyros_forearm_y, gyros_forearm_z, accel_forearm_x, accel_forearm_z, magnet_forearm_x, magnet_forearm_y, and magnet_forearm_z. From those chosen a GBM model was trained using the train function from the caret package.
 ```{r}
-trainingChosen <- select(trainingClean,pitch_belt,max_yaw_belt,min_yaw_belt,gyros_belt_x,gyros_belt_y,gyros_belt_z,accel_belt_x,magnet_belt_x,magnet_belt_y,roll_arm,pitch_arm,yaw_arm,total_accel_arm,gyros_arm_x,gyros_arm_y,accel_arm_y,accel_arm_z,magnet_arm_y,max_yaw_dumbbell,min_yaw_dumbbell,total_accel_dumbbell,gyros_dumbbell_x,gyros_dumbbell_x,gyros_dumbbell_z,accel_dumbbell_x,accel_dumbbell_y,magnet_dumbbell_x,magnet_dumbbell_y,magnet_dumbbell_z,pitch_forearm,skewness_yaw_forearm,gyros_forearm_x,gyros_forearm_y,gyros_forearm_z,accel_forearm_x,accel_forearm_z,magnet_forearm_x,magnet_forearm_y,magnet_forearm_z,classe)
-gdm_model <- train(classe ~ .,data=trainingChosen,method="gbm",verbose=FALSE)
+trainingChosen <- select(trainingClean,pitch_belt,max_yaw_belt,min_yaw_belt,gyros_belt_x,gyros_belt_y,gyros_belt_z,magnet_belt_x,magnet_belt_y,roll_arm,pitch_arm,yaw_arm,total_accel_arm,gyros_arm_x,gyros_arm_y,accel_arm_y,accel_arm_z,magnet_arm_y,max_yaw_dumbbell,min_yaw_dumbbell,total_accel_dumbbell,gyros_dumbbell_x,gyros_dumbbell_x,gyros_dumbbell_z,accel_dumbbell_x,accel_dumbbell_y,magnet_dumbbell_x,magnet_dumbbell_y,magnet_dumbbell_z,pitch_forearm,gyros_forearm_x,gyros_forearm_y,gyros_forearm_z,accel_forearm_x,accel_forearm_z,magnet_forearm_x,magnet_forearm_y,magnet_forearm_z,classe)
 ```
 This run created a long list of warnings. Examining these warnings showed that several prediction variables that were included were not used in the model. These variables were removed and the model was retrained. Additionally, repeated cross validation was included in this training run.
 ```{r}
@@ -42,7 +42,7 @@ This train run resulted without any errors or warnings in this instance.
 ```{r}
 max_accuracy <- gbm_model$results[gbm_model$results$Accuracy==max(gbm_model$results$Accuracy),]
 max_accuracy$Accuracy
-summary(gbm_model,rownames(gbm_model))
+summary(gbm_model,rownames(max_accuracy))
 ```
 
 **Results**

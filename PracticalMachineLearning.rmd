@@ -1,0 +1,54 @@
+---
+title: "Prediction of Barbell Lift Classification"
+author: "Brian Werner"
+date: "March 27, 2016"
+output: html_document
+---
+*Prediction of Barbell Lift Classification*
+
+**Introduction**
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways.
+
+**Data Analysis**
+The testing data is initially read from a CSV file. The resultant data frame contains 19,622 obs with 160 variables each. Many of these columns contained NAs and thus would need to be removed.
+```{r}
+library(caret)
+library(dplyr)
+training <- read.csv("pml-training.csv")
+trainingClean <- training[,colSums(is.na(training))==0]
+```
+After removal the data frame has only 93 variables. There are still a large number of variables for each observation. Not all of these variables may have any correlation with the resultant prediction.
+To determine the list of best predictive variables I examined the pairs plots. There were too many variables to put on one plot so I first created a data partition with only 20% of the observations and then subdivided them into groups of 10 variables plus the 'classe' variable. For example:
+```{r}
+trainSubset <- createDataPartition(trainingClean$classe,p=0.2,list=FALSE)
+trainingSub <- trainingClean[trainSubset,]
+pairsDF <- cbind(trainingSub[,8:18],trainingSub[,93])
+pairs(pairsDF)
+```
+This procedure was reiterated through the entire balance of columns.
+Following these iterations I picked the following predictors: trainingClean, pitch_belt, max_yaw_belt, min_yaw_belt, gyros_belt_x, gyros_belt_y, gyros_belt_z, accel_belt_x, magnet_belt_x, magnet_belt_y, roll_arm, pitch_arm,yaw_arm, total_accel_arm, gyros_arm_x, gyros_arm_y, accel_arm_y, accel_arm_z, magnet_arm_y, max_yaw_dumbbell, min_yaw_dumbbell, total_accel_dumbbell, gyros_dumbbell_x, gyros_dumbbell_x, gyros_dumbbell_z, accel_dumbbell_x, accel_dumbbell_y, magnet_dumbbell_x, magnet_dumbbell_y, magnet_dumbbell_z, pitch_forearm, skewness_yaw_forearm, gyros_forearm_x, gyros_forearm_y, gyros_forearm_z, accel_forearm_x, accel_forearm_z, magnet_forearm_x, magnet_forearm_y, and magnet_forearm_z. From those chosen a GBM model was trained using the train function from the caret package.
+```{r}
+trainingChosen <- select(trainingClean,pitch_belt,max_yaw_belt,min_yaw_belt,gyros_belt_x,gyros_belt_y,gyros_belt_z,accel_belt_x,magnet_belt_x,magnet_belt_y,roll_arm,pitch_arm,yaw_arm,total_accel_arm,gyros_arm_x,gyros_arm_y,accel_arm_y,accel_arm_z,magnet_arm_y,max_yaw_dumbbell,min_yaw_dumbbell,total_accel_dumbbell,gyros_dumbbell_x,gyros_dumbbell_x,gyros_dumbbell_z,accel_dumbbell_x,accel_dumbbell_y,magnet_dumbbell_x,magnet_dumbbell_y,magnet_dumbbell_z,pitch_forearm,skewness_yaw_forearm,gyros_forearm_x,gyros_forearm_y,gyros_forearm_z,accel_forearm_x,accel_forearm_z,magnet_forearm_x,magnet_forearm_y,magnet_forearm_z,classe)
+gdm_model <- train(classe ~ .,data=trainingChosen,method="gbm",verbose=FALSE)
+```
+This run created a long list of warnings. Examining these warnings showed that several prediction variables that were included were not used in the model. These variables were removed and the model was retrained. Additionally, repeated cross validation was included in this training run.
+```{r}
+trainingChosen <- select(trainingChosen,-min_yaw_belt,-max_yaw_belt)
+trainingChosen <- select(trainingChosen,-min_yaw_dumbbell,-max_yaw_dumbbell)
+tControl <- trainControl(method="repeatedcv",number=4,repeats=2)
+gbm_model <- train(classe ~ .,data=trainingChosen,method="gbm",trControl=tControl,verbose=FALSE)
+```
+This train run resulted without any errors or warnings in this instance.
+```{r}
+max_accuracy <- gbm_model$results[gbm_model$results$Accuracy==max(gbm_model$results$Accuracy),]
+max_accuracy$Accuracy
+summary(gbm_model,rownames(gbm_model))
+```
+
+**Results**
+
+The resulting prediction is:
+```{r}
+testing <- read.csv("pml-testing.csv")
+predict(gbm_model,testing)
+```
